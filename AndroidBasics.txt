@@ -1231,9 +1231,538 @@ That is the **core concept behind the entire Intent + Intent Filter mechanism**.
 
 ____________________________________________________________________________________________________________________
 
+## Compose State — Notes ⭐⭐⭐⭐⭐
+
+### 1. What is State?
+
+**State** is a value that can change during the lifetime of the UI and whose change should be reflected in the UI.
+
+Example:
+
+```kotlin
+var batteryLevel by remember {
+    mutableStateOf(0)
+}
+```
+
+Here:
+
+```text
+batteryLevel = State
+0 → 50 → 75 → 100
+```
+
+Whenever the state changes, Compose can update the UI that depends on it.
+
+---
+
+## 2. `mutableStateOf()`
+
+`mutableStateOf()` creates an **observable Compose state**.
+
+```kotlin
+val batteryState = mutableStateOf(0)
+```
+
+The actual value is accessed using:
+
+```kotlin
+batteryState.value
+```
+
+And changed using:
+
+```kotlin
+batteryState.value = 75
+```
+
+### Flow
+
+```text
+mutableStateOf(0)
+       ↓
+MutableState object
+       ↓
+stores value = 0
+       ↓
+value changes to 75
+       ↓
+Compose is notified
+```
+
+---
+
+## 3. `remember`
+
+`remember` keeps a value across **recompositions**.
+
+```kotlin
+val batteryState = remember {
+    mutableStateOf(0)
+}
+```
+
+Without `remember`, the state could be recreated when the composable executes again.
+
+### Important
+
+`remember`:
+
+* survives **recomposition**
+* does NOT mean permanent storage
+* does NOT normally survive Activity recreation/process death
+
+Think:
+
+```text
+remember = "Keep this value while this composable remains in the Composition."
+```
+
+---
+
+## 4. `by` — Property Delegation
+
+`by` is a **Kotlin feature** called **property delegation**.
+
+Without `by`:
+
+```kotlin
+val batteryState = remember {
+    mutableStateOf(0)
+}
+
+batteryState.value = 75
+
+Text("${batteryState.value}%")
+```
+
+With `by`:
+
+```kotlin
+var batteryLevel by remember {
+    mutableStateOf(0)
+}
+
+batteryLevel = 75
+
+Text("$batteryLevel%")
+```
+
+`by` allows the `MutableState` object to handle the property's **get and set operations**.
+
+### Easy definition
+
+> **Delegation means giving the responsibility of an operation to another object.**
+
+```text
+batteryLevel
+     ↓
+delegates get/set
+     ↓
+MutableState object
+```
+
+---
+
+# 5. Composition
+
+**Composition** is the process where Compose initially executes your composable functions and builds the UI.
+
+Example:
+
+```kotlin
+@Composable
+fun BatteryScreen() {
+    var batteryLevel by remember {
+        mutableStateOf(0)
+    }
+
+    Text("Battery: $batteryLevel%")
+}
+```
+
+Initially:
+
+```text
+BatteryScreen()
+     ↓
+Compose executes it
+     ↓
+batteryLevel = 0
+     ↓
+Text("Battery: 0%")
+     ↓
+Initial UI is created
+```
+
+This initial process is called **Composition**.
+
+---
+
+# 6. Recomposition
+
+**Recomposition** happens when Compose detects that state used by a composable has changed.
+
+Suppose:
+
+```kotlin
+batteryLevel = 75
+```
+
+Then:
+
+```text
+State changes
+     ↓
+Compose detects the change
+     ↓
+Affected composable scope is invalidated
+     ↓
+Recomposition is scheduled
+     ↓
+Relevant composable code executes again
+     ↓
+UI is updated
+```
+
+So:
+
+```text
+Composition
+= Initial creation of UI
+
+Recomposition
+= Re-execution of affected composable code
+  when observed state changes
+```
+
+---
+
+# 7. Complete Battery Example
+
+```kotlin
+@Composable
+fun BatteryScreen() {
+
+    var batteryLevel by remember {
+        mutableStateOf(0)
+    }
+
+    Text(
+        text = "Battery: $batteryLevel%"
+    )
+}
+```
+
+Suppose initially:
+
+```text
+batteryLevel = 0
+```
+
+UI:
+
+```text
+Battery: 0%
+```
+
+Then your battery logic gets:
+
+```text
+75%
+```
+
+and does:
+
+```kotlin
+batteryLevel = 75
+```
+
+Now:
+
+```text
+batteryLevel
+      ↓
+value changed
+      ↓
+MutableState notifies Compose
+      ↓
+Compose knows the UI read this state
+      ↓
+Recomposition
+      ↓
+Text("Battery: 75%")
+      ↓
+UI displays 75%
+```
+
+---
+
+# 8. `rememberSaveable`
+
+`rememberSaveable` is similar to `remember`, but it can restore supported state using Android's saved-state mechanism, such as after configuration changes.
+
+```kotlin
+var count by rememberSaveable {
+    mutableStateOf(0)
+}
+```
+
+### Difference
+
+| Feature                            | `remember`  | `rememberSaveable`     |
+| ---------------------------------- | ----------- | ---------------------- |
+| Survives recomposition             | ✅           | ✅                      |
+| Restores after Activity recreation | ❌ generally | ✅ for supported values |
+| Permanent storage                  | ❌           | ❌                      |
+| Database                           | ❌           | ❌                      |
+
+For your battery app, you normally don't need to save the battery percentage because you can query the current battery information again.
+
+---
+
+# 9. `State` vs UI
+
+State and UI are different.
+
+```text
+STATE
+batteryLevel = 75
+       ↓
+UI represents the state
+       ↓
+"Battery: 75%"
+```
+
+So:
+
+> **State = data**
+
+> **UI = representation of that data**
+
+---
+
+# 10. The Four Important Concepts
+
+Remember these four:
+
+```text
+mutableStateOf()
+        ↓
+Creates observable state
+
+remember
+        ↓
+Keeps state across recomposition
+
+by
+        ↓
+Kotlin property delegation
+        ↓
+Allows direct access instead of .value
+
+recomposition
+        ↓
+Compose re-executes affected
+composable code when observed
+state changes
+```
+
+### Interview-ready answer
+
+> **Compose State is data that can change and affect the UI. `mutableStateOf()` creates observable state, `remember` retains that state across recompositions, and `by` uses Kotlin property delegation to simplify access to the state's value. When an observed state changes, Compose detects the change and performs recomposition of the affected composable scopes, allowing the UI to display the new state.**
 
 ____________________________________________________________________________________________________________________
+
+**Launch modes** control **how Android creates or reuses an `Activity` when you start it**.
+
+Don't confuse this with the **Launcher** we just discussed.
+
+* **Launcher** → starts your app from the phone's home/app drawer.
+* **Launch mode** → controls what Android does with an Activity when you call `startActivity()`.
+
+### Simple example
+
+Suppose you have:
+
+```text
+MainActivity
+SecondActivity
+```
+
+From `MainActivity`:
+
+```kotlin
+startActivity(Intent(this, SecondActivity::class.java))
+```
+
+Normally Android creates a **new instance** of `SecondActivity`.
+
+But launch modes can change this behavior.
+
+There are 4 important launch modes:
+
+| Launch mode      | Simple meaning                                                        |
+| ---------------- | --------------------------------------------------------------------- |
+| `standard`       | Create a new Activity instance every time                             |
+| `singleTop`      | Reuse the existing Activity if it is already **on top**               |
+| `singleTask`     | Reuse an existing Activity in the task and remove Activities above it |
+| `singleInstance` | Activity gets its own separate task                                   |
+
+---
+
+### 1. `standard`
+
+Default behavior.
+
+```text
+MainActivity
+    ↓
+SecondActivity
+    ↓
+SecondActivity
+    ↓
+SecondActivity
+```
+
+Every time you call:
+
+```kotlin
+startActivity(Intent(this, SecondActivity::class.java))
+```
+
+Android creates another `SecondActivity`.
+
+So you can have:
+
+```text
+SecondActivity #1
+SecondActivity #2
+SecondActivity #3
+```
+
+---
+
+### 2. `singleTop`
+
+Suppose:
+
+```text
+MainActivity
+    ↓
+SecondActivity
+```
+
+Now you start `SecondActivity` again.
+
+Because `SecondActivity` is already **at the top**, Android reuses it.
+
+```text
+MainActivity
+    ↓
+SecondActivity
+```
+
+It does **not** create another one.
+
+But if:
+
+```text
+MainActivity
+    ↓
+SecondActivity
+    ↓
+ThirdActivity
+```
+
+and you start `SecondActivity` again, `SecondActivity` isn't on top.
+
+So Android can create another one:
+
+```text
+MainActivity
+    ↓
+SecondActivity #1
+    ↓
+ThirdActivity
+    ↓
+SecondActivity #2
+```
+
+---
+
+### 3. `singleTask`
+
+This is different.
+
+Suppose:
+
+```text
+MainActivity
+    ↓
+SecondActivity
+    ↓
+ThirdActivity
+```
+
+If `SecondActivity` is `singleTask` and you start it again:
+
+```text
+MainActivity
+    ↓
+SecondActivity
+```
+
+`ThirdActivity` is removed.
+
+Android brings the existing `SecondActivity` to the front instead of creating another instance.
+
+---
+
+### 4. `singleInstance`
+
+This puts the Activity in its **own task**.
+
+It's a more specialized mode and is much less common in normal application development.
+
+---
+
+### Where do we specify launch mode?
+
+In `AndroidManifest.xml`:
+
+```xml
+<activity
+    android:name=".SecondActivity"
+    android:launchMode="singleTop" />
+```
+
+Or you can control some launch behavior through flags on the `Intent`.
+
+### Most important distinction
+
+Don't mix these three:
+
+```text
+LAUNCHER
+   ↓
+Can this Activity be launched from the phone's launcher?
+
+launchMode
+   ↓
+How should Android create/reuse this Activity?
+
+Intent
+   ↓
+What action/request do I want Android to perform?
+```
+
+So if an interviewer asks **"What is launch mode?"**, a good answer is:
+
+> **“Launch mode defines how Android creates or reuses an Activity instance when that Activity is launched. The main modes are standard, singleTop, singleTask, and singleInstance.”**
+
 ____________________________________________________________________________________________________________________
+
 ____________________________________________________________________________________________________________________
 ____________________________________________________________________________________________________________________
 ____________________________________________________________________________________________________________________
