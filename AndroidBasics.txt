@@ -1,46 +1,479 @@
-Context :
-It is an object that gives your code access to information and services provided by the Android system for a particular application/component environment.
+## Context — Android Notes ⭐⭐⭐⭐⭐
 
-🧠 Context = your connection/handle to the Android environment.
+### 1. What is Context?
 
-Your Kotlin code
-       ↓
-    Context
-       ↓
-Android system
-       ↓
-OS services/resources
+**Context represents the environment in which an Android component is running.**
 
-____________________________________________________________________________________________________________________
+It acts as a **bridge/reference between your application and the Android system**, allowing your code to access Android framework features.
 
-3. Why does Android need Context?
+```text
+Your App
+   ↓
+Context
+   ↓
+Android Framework / OS
+   ↓
+System services, resources, activities, etc.
+```
 
-Imagine your Battery Monitor app wants battery information.
+---
 
-You write:
+## 2. What can Context be used for?
 
+Context provides access to many Android features:
+
+```text
+Context
+   │
+   ├── System Services
+   │      ├── BatteryManager
+   │      ├── PowerManager
+   │      ├── NotificationManager
+   │      └── ConnectivityManager
+   │
+   ├── Resources
+   │      ├── Strings
+   │      ├── Colors
+   │      └── Drawables
+   │
+   ├── Start Activities
+   │
+   ├── Send/Register Broadcasts
+   │
+   ├── Application information
+   │
+   └── App files/preferences
+```
+
+Example:
+
+```kotlin
 val batteryManager =
     context.getSystemService(Context.BATTERY_SERVICE)
+```
 
-You might wonder:
+Here, `Context` helps your code obtain the Android `BatteryManager` system service.
 
-Why can't I just write getSystemService()?
+---
 
-Because Android needs to know which application/component is making the request.
+# 3. Context is NOT a System Service
 
-The context provides that connection.
+Don't confuse these:
+
+```text
+Context
+   ↓
+getSystemService()
+   ↓
+BatteryManager
+```
+
+`Context` provides a way to access Android services.
+
+`BatteryManager` is the actual API that provides battery-related functionality.
+
+---
+
+# 4. Different types of Context
+
+There is no separate "normal Context."
+
+`Context` is the **base/abstract type**, and Android provides different Context implementations.
+
+The two important ones for you are:
+
+```text
+                 Context
+                    │
+          ┌─────────┴─────────┐
+          ↓                   ↓
+ Activity Context      Application Context
+```
+
+---
+
+# 5. Activity Context
+
+An **Activity Context** is associated with a particular Activity.
+
+For example:
+
+```text
+MainActivity
+     ↓
+Activity Context
+```
+
+Inside an Activity, you can commonly use:
+
+```kotlin
+this
+```
+
+as the Activity's Context.
+
+Example:
+
+```kotlin
+val batteryManager =
+    this.getSystemService(Context.BATTERY_SERVICE)
+```
+
+Activity Context is especially relevant when an operation needs to be associated with a particular Activity or its UI/window.
+
+### Important point
+
+An Activity has its own lifecycle:
+
+```text
+onCreate()
+   ↓
+onStart()
+   ↓
+onResume()
+   ↓
+...
+   ↓
+onDestroy()
+```
+
+Therefore, an Activity Context is tied to that Activity's lifecycle.
+
+---
+
+# 6. Application Context
+
+**Application Context** represents the application-level environment.
+
+You can obtain it using:
+
+```kotlin
+applicationContext
+```
 
 Conceptually:
 
-Your BatteryScreen
-       ↓
-     Context
-       ↓
-"Give me the battery service"
-       ↓
-Android System
-       ↓
+```text
+Application
+     ↓
+Application Context
+     ↓
+Whole application environment
+```
+
+It is **not tied to a particular Activity**.
+
+Therefore, it is commonly appropriate for objects that need a Context for a long time and don't need an Activity/UI-specific Context.
+
+Example:
+
+```kotlin
+val context = applicationContext
+```
+
+---
+
+# 7. Activity Context vs Application Context
+
+| Activity Context                                      | Application Context                  |
+| ----------------------------------------------------- | ------------------------------------ |
+| Associated with one Activity                          | Associated with the application      |
+| Has Activity lifecycle                                | Lives with application process       |
+| Can be appropriate for UI/Activity-related operations | Good for application-wide operations |
+| Can be destroyed when Activity is destroyed           | Not tied to a particular Activity    |
+| Avoid storing it in long-lived objects unnecessarily  | Safer for long-lived objects         |
+
+### Simple mental model
+
+```text
+Activity Context
+      ↓
+"This particular Activity"
+
+Application Context
+      ↓
+"This application"
+```
+
+---
+
+# 8. Context and `getSystemService()`
+
+One of the most common uses:
+
+```kotlin
+context.getSystemService(...)
+```
+
+For example:
+
+```kotlin
+val powerManager =
+    context.getSystemService(Context.POWER_SERVICE)
+```
+
+```kotlin
+val notificationManager =
+    context.getSystemService(Context.NOTIFICATION_SERVICE)
+```
+
+```kotlin
+val connectivityManager =
+    context.getSystemService(Context.CONNECTIVITY_SERVICE)
+```
+
+So the general flow is:
+
+```text
+Context
+   ↓
+getSystemService()
+   ↓
+Android System Service
+   ↓
+Specific API
+```
+
+---
+
+# 9. Context in Jetpack Compose
+
+In Compose, you often see:
+
+```kotlin
+val context = LocalContext.current
+```
+
+`LocalContext.current` provides the current Android `Context` available to the Compose hierarchy.
+
+For example:
+
+```kotlin
+@Composable
+fun BatteryScreen() {
+
+    val context = LocalContext.current
+
+    val batteryManager =
+        context.getSystemService(Context.BATTERY_SERVICE)
+}
+```
+
+Flow:
+
+```text
+Compose
+   ↓
+LocalContext.current
+   ↓
+Context
+   ↓
+getSystemService()
+   ↓
 BatteryManager
+```
+
+This is exactly what you used in your battery project.
+
+---
+
+# 10. Why do we have different Contexts?
+
+Because Android operations have **different scopes and lifecycles**.
+
+For example:
+
+```text
+Need something related to a specific Activity?
+        ↓
+Activity Context
+```
+
+```text
+Need something for long-lived/application-wide work?
+        ↓
+Application Context
+```
+
+Both are still `Context`.
+
+---
+
+# 11. Important warning — Context leaks
+
+Suppose:
+
+```text
+Long-lived object
+       ↓
+holds MainActivity Context
+       ↓
+MainActivity gets destroyed
+```
+
+If the long-lived object continues holding that Activity reference, it can prevent the Activity from being garbage collected.
+
+This can cause an **Activity memory leak**.
+
+That's one reason developers need to choose the appropriate Context.
+
+---
+
+# 12. Context vs Activity
+
+Remember:
+
+```text
+Activity is a Context
+```
+
+More precisely, `Activity` is a subclass of `ContextThemeWrapper`, which ultimately derives from `Context`.
+
+Conceptually:
+
+```text
+Context
+   ↑
+ContextWrapper
+   ↑
+ContextThemeWrapper
+   ↑
+Activity
+```
+
+So an Activity can provide Context functionality.
+
+---
+
+# 13. Context vs `this`
+
+Inside an Activity:
+
+```kotlin
+this
+```
+
+usually refers to the current Activity object.
+
+Since an Activity is a Context:
+
+```kotlin
+this.getSystemService(...)
+```
+
+works.
+
+You may also see:
+
+```kotlin
+this@MainActivity
+```
+
+when Kotlin needs you to explicitly refer to the Activity from a nested scope.
+
+---
+
+# 14. Context vs `applicationContext`
+
+You might see:
+
+```kotlin
+context
+```
+
+and:
+
+```kotlin
+context.applicationContext
+```
+
+The first refers to whatever Context you currently have.
+
+The second explicitly obtains the **Application Context**.
+
+For example:
+
+```kotlin
+val activityContext: Context = this
+
+val appContext: Context = this.applicationContext
+```
+
+---
+
+# 15. Your battery project
+
+Your project uses:
+
+```kotlin
+val context = LocalContext.current
+```
+
+Then:
+
+```kotlin
+val batteryManager =
+    context.getSystemService(Context.BATTERY_SERVICE)
+            as BatteryManager
+```
+
+The complete idea is:
+
+```text
+Compose UI
+    ↓
+LocalContext.current
+    ↓
+Context
+    ↓
+getSystemService()
+    ↓
+Android OS
+    ↓
+BatteryManager
+    ↓
+Battery information
+```
+
+So **Context is not the battery API**.
+
+It is the Android environment/reference that lets your code interact with Android's framework.
+
+---
+
+## ⭐ Interview-ready definition
+
+> **Context represents the environment associated with an Android application or component. It provides access to Android framework features such as system services, resources, application information, and component operations. Activity Context is associated with a particular Activity, while Application Context is associated with the application and is suitable for application-wide or long-lived operations.**
+
+### 🧠 Remember these 5 points
+
+```text
+1. Context = Android environment/reference
+
+2. Context allows access to Android framework features
+
+3. getSystemService() uses Context to obtain system services
+
+4. Activity Context → specific Activity
+
+5. Application Context → whole application
+```
+
+And your simplest mental model:
+
+```text
+             CONTEXT
+                ↓
+       "Where is my app/code
+        operating in Android?"
+                ↓
+       ┌────────┴────────┐
+       ↓                 ↓
+ Activity Context   Application Context
+       ↓                 ↓
+  One Activity       Whole App
+```
+
 
 
 
@@ -1763,7 +2196,928 @@ So if an interviewer asks **"What is launch mode?"**, a good answer is:
 
 ____________________________________________________________________________________________________________________
 
+Absolutely. Since you're learning Android from the beginning, first understand the **problem each one solves**, instead of memorizing definitions.
+
+Android has several different components because an app doesn't always need to show a screen.
+
+Think of an Android app like this:
+
+```text
+                Android App
+                    │
+        ┌───────────┼───────────┐
+        ↓           ↓           ↓
+     Activity     Service   BroadcastReceiver
+        │           │           │
+     Screen      Work in      React to
+                background      events
+```
+
+## 1. Activity — "I need a screen"
+
+You already know this one.
+
+An `Activity` represents a **screen/UI entry point**.
+
+For example:
+
+```text
+MainActivity
+     ↓
+Login screen
+```
+
+When the user opens your app:
+
+```text
+Launcher
+   ↓
+MainActivity
+   ↓
+UI appears
+```
+
+So:
+
+> **Activity = component used to provide a user interface/screen.**
+
+---
+
+# 2. Service — "I need to do something without a screen"
+
+A **Service** is an Android component designed for work that doesn't require a user interface.
+
+Imagine:
+
+```text
+You open Spotify
+      ↓
+Start playing music
+      ↓
+You leave Spotify
+      ↓
+Open WhatsApp
+      ↓
+Music continues
+```
+
+The music doesn't need Spotify's screen to remain visible.
+
+That's the kind of situation where a **Service** can be involved.
+
+Conceptually:
+
+```text
+Activity
+   ↓
+starts Service
+   ↓
+Service performs work
+   ↓
+Activity can disappear
+   ↓
+Work can continue according to Android's service rules
+```
+
+### Another example
+
+A navigation app could have:
+
+```text
+Google Maps screen
+       ↓
+User starts navigation
+       ↓
+Location-related work
+       ↓
+User locks phone
+       ↓
+Navigation-related work continues
+```
+
+Again, the important idea is:
+
+> **Service = a component for work that may need to continue without an Activity's UI being visible.**
+
+### Important beginner point
+
+Don't think:
+
+> "Service = anything that runs in the background forever."
+
+That's **not correct**.
+
+Modern Android puts restrictions on background execution, and different types of services exist, including **foreground services** for work that needs to remain noticeable to the user.
+
+---
+
+# 3. BroadcastReceiver — "Something happened; react to it"
+
+Now this one is different.
+
+A **BroadcastReceiver** waits for a **broadcast event** and reacts when that event occurs.
+
+Imagine your phone's Android system saying:
+
+```text
+"Battery is low!"
+```
+
+or:
+
+```text
+"Phone has finished booting!"
+```
+
+or:
+
+```text
+"Power connected!"
+```
+
+A BroadcastReceiver can listen for appropriate broadcasts and execute code when they occur.
+
+Think of it like a **doorbell**.
+
+```text
+Event happens
+     ↓
+Broadcast
+     ↓
+BroadcastReceiver hears it
+     ↓
+Your code runs
+```
+
+---
+
+# 4. Your battery project is actually a great example
+
+You previously used:
+
+```kotlin
+val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+```
+
+This is related to Android's **broadcast mechanism**.
+
+You are basically saying:
+
+> "I'm interested in battery-change information."
+
+Then Android provides battery information through the broadcast mechanism.
+
+Conceptually:
+
+```text
+Android OS
+    ↓
+Battery state changes
+    ↓
+ACTION_BATTERY_CHANGED
+    ↓
+Broadcast mechanism
+    ↓
+Receiver
+    ↓
+Battery information
+```
+
+In your code you used:
+
+```kotlin
+context.registerReceiver(null, filter)
+```
+
+This is a little different from creating your own `BroadcastReceiver` class—the receiver argument is `null`, and you're using the registration mechanism to obtain the current sticky battery broadcast data.
+
+So don't conclude that **every `IntentFilter` means you created a BroadcastReceiver**.
+
+---
+
+# 5. What exactly is a Broadcast?
+
+A **broadcast** is simply a message/event from Android or an app saying:
+
+> **"Something happened."**
+
+For example:
+
+```text
+BATTERY_LOW
+       ↓
+"Battery is low"
+
+BOOT_COMPLETED
+       ↓
+"Android finished booting"
+
+POWER_CONNECTED
+       ↓
+"Charger connected"
+```
+
+The broadcast itself isn't the receiver.
+
+Think:
+
+```text
+Broadcast = announcement
+
+BroadcastReceiver = listener that reacts to the announcement
+```
+
+---
+
+# 6. Real-world analogy
+
+Imagine a college.
+
+### Activity
+
+You enter a classroom:
+
+```text
+Classroom
+   ↓
+You can see the teacher
+   ↓
+You interact with the UI
+```
+
+That's like:
+
+```text
+Activity = screen
+```
+
+### Service
+
+The college security team works even when you're not standing in front of them:
+
+```text
+Security team
+   ↓
+continues their assigned work
+```
+
+That's similar to:
+
+```text
+Service = component for background/ongoing work
+```
+
+### BroadcastReceiver
+
+The college announces:
+
+> "The exam has started!"
+
+Everyone who is listening reacts.
+
+```text
+Announcement
+     ↓
+People listening
+     ↓
+React
+```
+
+That's:
+
+```text
+Broadcast
+     ↓
+BroadcastReceiver
+     ↓
+React to event
+```
+
+---
+
+# 7. The biggest difference
+
+Remember this table:
+
+| Component             | Main purpose                    | UI?     | Simple example               |
+| --------------------- | ------------------------------- | ------- | ---------------------------- |
+| **Activity**          | Show/interact with a screen     | ✅ Yes   | Login screen                 |
+| **Service**           | Perform ongoing/background work | ❌ No UI | Music playback               |
+| **BroadcastReceiver** | React to an event/broadcast     | ❌ No UI | React to battery/power event |
+
+---
+
+# 8. How they can work together
+
+A real application can use all three.
+
+For example, imagine a music app:
+
+```text
+User opens app
+      ↓
+Activity
+      ↓
+Music UI appears
+      ↓
+User presses Play
+      ↓
+Service
+      ↓
+Music playback continues
+```
+
+Then Android sends an event:
+
+```text
+Headphones connected
+      ↓
+Broadcast
+      ↓
+BroadcastReceiver
+      ↓
+App reacts
+```
+
+So:
+
+```text
+                 Android App
+                     │
+       ┌─────────────┼─────────────┐
+       ↓             ↓             ↓
+    Activity       Service   BroadcastReceiver
+       │             │             │
+      UI        ongoing work    reacts to events
+```
+
+---
+
+## One very important distinction
+
+You might wonder:
+
+> **"Is a Service the same as a Thread or Coroutine?"**
+
+No.
+
+They're different concepts.
+
+```text
+Service
+   ↓
+Android component/lifecycle mechanism
+
+Coroutine
+   ↓
+Way to perform asynchronous work
+
+Thread
+   ↓
+Execution thread
+```
+
+A Service can **use coroutines/threads internally**, but a Service itself isn't a thread.
+
+---
+
+## Interview-ready definitions
+
+**Activity:**
+
+> "An Activity is an Android component that provides a user interface and represents a screen or entry point of an application."
+
+**Service:**
+
+> "A Service is an Android component used for work that doesn't require a user interface and may need to continue beyond the visibility of an Activity, subject to Android's background execution rules."
+
+**BroadcastReceiver:**
+
+> "A BroadcastReceiver is an Android component that receives and responds to broadcast events from the Android system or applications."
+
+### The easiest memory trick
+
+```text
+Activity
+= SHOW something
+
+Service
+= DO something
+
+BroadcastReceiver
+= REACT to something
+```
+
+That three-line model is the one I'd remember first.
+
+
 ____________________________________________________________________________________________________________________
+
+Here are **note-ready explanations** for **Service, Broadcast, and BroadcastReceiver**, using your Battery Monitor project as the example.
+
+# Android Service, Broadcast & BroadcastReceiver
+
+## 1. Service
+
+A **Service** is an Android application component used to perform work **without a user interface (UI)**.
+
+A Service can continue working even when the user is not directly interacting with a screen.
+
+### Example
+
+In our project:
+
+```text
+BatteryReceiver
+      ↓
+startService()
+      ↓
+BatteryService
+      ↓
+Process battery data
+      ↓
+stopSelf()
+```
+
+The Service doesn't display anything on the screen. It performs its work separately from the UI.
+
+### Important point
+
+A Service **does not automatically run on a separate thread**.
+
+If heavy work is performed inside a Service, you may need:
+
+* Coroutines
+* Threads
+* Other background mechanisms
+
+---
+
+# 2. Types of Service
+
+There are two important ways a Service can be used.
+
+### Started Service
+
+Started using:
+
+```kotlin
+startService(intent)
+```
+
+Android calls:
+
+```kotlin
+onStartCommand()
+```
+
+Example:
+
+```text
+startService()
+     ↓
+onCreate()
+     ↓
+onStartCommand()
+     ↓
+Work
+     ↓
+stopSelf()
+     ↓
+onDestroy()
+```
+
+This is the type used in our Battery project.
+
+### Bound Service
+
+Used when another component wants to **connect and communicate with the Service**.
+
+```kotlin
+bindService(...)
+```
+
+It uses:
+
+```kotlin
+onBind()
+```
+
+For our project, we are **not using a Bound Service**.
+
+---
+
+# 3. Service Lifecycle
+
+For our Started Service:
+
+```text
+startService()
+      ↓
+onCreate()
+      ↓
+onStartCommand()
+      ↓
+Perform work
+      ↓
+stopSelf()
+      ↓
+onDestroy()
+```
+
+### `onCreate()`
+
+Called when the Service is created.
+
+Used for initialization.
+
+```kotlin
+override fun onCreate() {
+    super.onCreate()
+}
+```
+
+### `onStartCommand()`
+
+Called when the Service receives a start request.
+
+This is where the main Service work is normally performed.
+
+```kotlin
+override fun onStartCommand(
+    intent: Intent?,
+    flags: Int,
+    startId: Int
+): Int {
+    return START_NOT_STICKY
+}
+```
+
+### `onDestroy()`
+
+Called when the Service is being destroyed.
+
+Used for cleanup.
+
+### `onBind()`
+
+Required when extending `Service`, but for our Started Service we return:
+
+```kotlin
+override fun onBind(intent: Intent?): IBinder? {
+    return null
+}
+```
+
+We are not using Bound Service functionality.
+
+---
+
+# 4. Broadcast
+
+A **Broadcast** is a message/event sent by Android or an application to notify interested components that **something happened**.
+
+Think of it as:
+
+> **"Something happened. Anyone interested can receive this message."**
+
+Examples of Android broadcasts:
+
+```text
+Battery changed
+Device boot completed
+Airplane mode changed
+Charging state changed
+Screen turned on/off
+```
+
+In our project, we use:
+
+```kotlin
+Intent.ACTION_BATTERY_CHANGED
+```
+
+This is a system broadcast related to battery state.
+
+---
+
+# 5. BroadcastReceiver
+
+A **BroadcastReceiver** is an Android component that **receives and responds to broadcasts**.
+
+It has:
+
+```kotlin
+override fun onReceive(
+    context: Context,
+    intent: Intent
+)
+```
+
+The `onReceive()` method runs when the receiver receives a matching broadcast.
+
+### Simple flow
+
+```text
+Android System
+      ↓
+Broadcast
+"A battery change happened"
+      ↓
+BroadcastReceiver
+      ↓
+onReceive()
+      ↓
+Process the information
+```
+
+---
+
+# 6. IntentFilter
+
+A **BroadcastReceiver** needs to know which broadcasts it is interested in.
+
+We use an `IntentFilter`.
+
+In our project:
+
+```kotlin
+val filter = IntentFilter(
+    Intent.ACTION_BATTERY_CHANGED
+)
+```
+
+This means:
+
+> "I am interested in battery-change broadcasts."
+
+Then:
+
+```kotlin
+registerReceiver(
+    batteryReceiver,
+    filter
+)
+```
+
+registers the receiver.
+
+---
+
+# 7. Battery Broadcast in Our Project
+
+The Android system sends:
+
+```text
+ACTION_BATTERY_CHANGED
+```
+
+The broadcast `Intent` contains battery-related information as **extras**.
+
+For example:
+
+```text
+EXTRA_LEVEL
+EXTRA_SCALE
+EXTRA_STATUS
+EXTRA_VOLTAGE
+EXTRA_TEMPERATURE
+EXTRA_HEALTH
+EXTRA_TECHNOLOGY
+```
+
+Our receiver extracts them:
+
+```kotlin
+val level = intent.getIntExtra(
+    BatteryManager.EXTRA_LEVEL,
+    0
+)
+```
+
+So the `Intent` is carrying the data.
+
+---
+
+# 8. BroadcastReceiver → Activity
+
+Our receiver sends the extracted information to `BatteryActivity` through a callback.
+
+```text
+Android
+   ↓
+Battery Broadcast
+   ↓
+BatteryReceiver
+   ↓
+onBatteryChanged(...)
+   ↓
+BatteryActivity
+   ↓
+Compose State
+   ↓
+UI updates
+```
+
+For example:
+
+```kotlin
+onBatteryChanged(
+    batteryPercentage,
+    chargingStatus,
+    voltage,
+    temperature,
+    health,
+    technology
+)
+```
+
+The Activity then updates:
+
+```kotlin
+batteryLevel.value = level
+```
+
+Compose detects the state change and recomposes the UI.
+
+---
+
+# 9. BroadcastReceiver → Service
+
+Our receiver also sends the battery information to the Service.
+
+First we create an explicit Intent:
+
+```kotlin
+val serviceIntent = Intent(
+    context,
+    BatteryService::class.java
+)
+```
+
+Then we put the battery data into it:
+
+```kotlin
+serviceIntent.putExtra(
+    "batteryLevel",
+    batteryPercentage
+)
+
+serviceIntent.putExtra(
+    "chargingStatus",
+    chargingStatus
+)
+```
+
+Then:
+
+```kotlin
+context.startService(serviceIntent)
+```
+
+The Service receives the Intent in:
+
+```kotlin
+onStartCommand()
+```
+
+and extracts the data:
+
+```kotlin
+val batteryLevel =
+    intent?.getIntExtra(
+        "batteryLevel",
+        0
+    ) ?: 0
+```
+
+---
+
+# 10. Complete Architecture of Our Project
+
+```text
+                 Android System
+                       │
+                       │ Battery changes
+                       ↓
+              ACTION_BATTERY_CHANGED
+                       │
+                       ↓
+               BatteryReceiver
+                       │
+             ┌─────────┴─────────┐
+             ↓                   ↓
+       Callback              Intent Extras
+             ↓                   ↓
+     BatteryActivity       BatteryService
+             ↓                   ↓
+       Compose State        onStartCommand()
+             ↓                   ↓
+            UI              Perform Work
+                                 ↓
+                              stopSelf()
+```
+
+---
+
+# 11. Difference Between Broadcast & BroadcastReceiver
+
+| Broadcast                             | BroadcastReceiver                  |
+| ------------------------------------- | ---------------------------------- |
+| The **event/message**                 | The **component that receives it** |
+| Says something happened               | Reacts when something happened     |
+| Example: `ACTION_BATTERY_CHANGED`     | `BatteryReceiver`                  |
+| Sent by Android/app                   | Receives the broadcast             |
+| Contains information in Intent extras | Reads the information from Intent  |
+
+Simple memory trick:
+
+> **Broadcast = Message**
+> **BroadcastReceiver = Message Receiver**
+
+---
+
+# 12. Difference Between Service & BroadcastReceiver
+
+| Service                                     | BroadcastReceiver             |
+| ------------------------------------------- | ----------------------------- |
+| Performs work                               | Responds to events            |
+| Can perform longer-running work             | Designed for short processing |
+| Has lifecycle                               | Has `onReceive()`             |
+| Uses `onStartCommand()` for Started Service | Uses `onReceive()`            |
+| Can be started with `startService()`        | Receives broadcasts           |
+| Example: `BatteryService`                   | Example: `BatteryReceiver`    |
+
+### Simple way to remember
+
+```text
+Broadcast
+    ↓
+"Something happened!"
+
+BroadcastReceiver
+    ↓
+"Let me react to it."
+
+Service
+    ↓
+"Let me perform some work."
+```
+
+---
+
+# 13. Important Classes in Our Project
+
+```text
+Service
+    → BatteryService
+
+Broadcast
+    → ACTION_BATTERY_CHANGED
+
+BroadcastReceiver
+    → BatteryReceiver
+
+Intent
+    → Carries messages/data
+
+IntentFilter
+    → Specifies which broadcasts to receive
+
+BatteryManager
+    → Provides battery-related constants/APIs
+
+Activity
+    → BatteryActivity
+
+Compose State
+    → Stores current battery values for UI
+```
+
+### Final one-line definitions
+
+**Service:**
+
+> An Android component used to perform work without a UI.
+
+**Broadcast:**
+
+> A message/event that informs components that something happened.
+
+**BroadcastReceiver:**
+
+> An Android component that receives and reacts to broadcasts.
+
+**Intent:**
+
+> A messaging object used to communicate between Android components and carry data.
+
+**IntentFilter:**
+
+> A declaration of which types of intents/broadcasts a component is interested in.
+
+
+
 ____________________________________________________________________________________________________________________
 ____________________________________________________________________________________________________________________
 ____________________________________________________________________________________________________________________
