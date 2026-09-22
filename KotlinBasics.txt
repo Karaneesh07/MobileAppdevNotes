@@ -1908,6 +1908,7 @@ name = "Karan"
 is basically:
 
 this.name = "Karan"
+
 Now let() ⭐
 
 Imagine you already have:
@@ -2257,6 +2258,298 @@ main()
 
 greet() is a local function because it is declared inside main().
 
+------------------------------------------------------------------------------------------
+
+List
+
+A List maintains order and allows duplicates.
+
+val names = listOf("A", "B", "C", "A")
+
+Conceptually:
+
+Index:  0   1   2   3
+Value:  A   B   C   A
+
+Access:
+
+println(names[0])
+
+Output:
+
+A
+Mutable list
+val names = mutableListOf("A", "B")
+
+names.add("C")
+names.remove("A")
+
+Important:
+
+val list = mutableListOf(...)
+
+val means the reference isn't reassigned.
+
+The contents can still change because the object is mutable.
+------------------------------------------------------------------------------------------
+
+Set
+
+A Set stores unique values.
+
+val numbers = setOf(1, 2, 3, 3, 4)
+
+Conceptually:
+
+1
+2
+3
+4
+
+The duplicate 3 is removed.
+
+Use a Set when uniqueness matters.
+------------------------------------------------------------------------------------------
+
+Map
+
+A Map stores:
+
+key → value
+
+Example:
+
+val students = mapOf(
+    101 to "Karaneesh",
+    102 to "Rahul",
+    103 to "Arun"
+)
+
+Access:
+
+println(students[101])
+
+Result:
+
+Karaneesh
+
+Think:
+
+101 → Karaneesh
+102 → Rahul
+103 → Arun
+------------------------------------------------------------------------------------------
+
+Smart Casting
+
+Kotlin can automatically change the usable type after checking it.
+
+Example:
+
+fun printLength(value: Any) {
+
+    if (value is String) {
+        println(value.length)
+    }
+}
+
+*we dont need to convert that value into string and then check length , we can check directly,
+this is called smart casting
+------------------------------------------------------------------------------------------
+Is
+
+is checks whether an object is of a particular type.
+
+if (value is String) {
+    println(value.length)
+}
+
+You can think of it as Java's:
+
+instanceof
+
+Java:
+
+if (value instanceof String) {
+    String s = (String) value;
+}
+
+Kotlin:
+
+if (value is String) {
+    println(value.length)
+}
+
+Kotlin combines type checking and smart casting.
+------------------------------------------------------------------------------------------
+
+Extension Functions
+
+One of Kotlin's most useful features.
+
+Suppose you have:
+
+fun String.firstCharacter(): Char {
+    return this[0]
+}
+
+Now:
+
+val name = "Karaneesh"
+
+println(name.firstCharacter())
+
+It looks like firstCharacter() belongs to String.
+
+But you didn't modify the String class.
+
+You're extending its functionality externally.
+
+Another example
+fun Int.isEven(): Boolean {
+    return this % 2 == 0
+}
+
+Then:
+
+println(10.isEven())
+
+Output:
+
+true
+
+this refers to the object on which the extension function is called.
+
+10.isEven()
+ ↑
+ this
+
+Important:
+
+Extension functions don't actually modify the original class.
+
+They are resolved statically by the compiler.
+------------------------------------------------------------------------------------------
+
+27. Lambdas
+
+A lambda is a function without a name.
+
+Normal function:
+
+fun add(a: Int, b: Int): Int {
+    return a + b
+}
+
+Lambda:
+
+val add = { a: Int, b: Int ->
+    a + b
+}
+
+Call:
+
+println(add(10, 20))
+
+Result:
+
+30
+
+Basic structure:
+
+{ parameters -> body }
+
+Example:
+
+val greet = { name: String ->
+    println("Hello $name")
+}
+
+Call:
+
+greet("Karaneesh")
+
+
+------------------------------------------------------------------------------------------
+
+Higher-Order Functions
+
+A higher-order function is a function that either:
+
+accepts another function as a parameter, or
+returns a function.
+
+Most commonly you'll see the first.
+
+Example:
+
+fun calculate(
+    a: Int,
+    b: Int,
+    operation: (Int, Int) -> Int
+): Int {
+
+    return operation(a, b)
+}
+
+Now:
+
+val result = calculate(10, 20) { x, y ->
+    x + y
+}
+
+The flow is:
+
+calculate()
+   ↓
+receives 10
+   ↓
+receives 20
+   ↓
+receives lambda
+   ↓
+operation(10,20)
+   ↓
+30
+
+The type:
+
+(Int, Int) -> Int
+
+means:
+
+takes Int + Int
+        ↓
+returns Int
+
+Another:
+
+(String) -> Unit
+
+means:
+
+takes String
+    ↓
+returns Unit
+
+This concept is extremely important for Android and Kotlin because you'll see it everywhere:
+
+button.setOnClickListener {
+    // ...
+}
+
+The lambda is being passed as behavior.
+
+
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
