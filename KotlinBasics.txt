@@ -2542,7 +2542,1172 @@ The lambda is being passed as behavior.
 
 
 ------------------------------------------------------------------------------------------
+
+# Kotlin Scope Functions — Notes
+
+## 1. What are Scope Functions?
+
+**Scope functions** are Kotlin functions that execute a block of code within the **context/scope of an object**.
+
+They allow us to work with an object without repeatedly writing its name.
+
+Example without scope function:
+
+```kotlin
+val user = User()
+
+user.name = "Karaneesh"
+user.age = 21
+user.city = "Chennai"
+```
+
+Using `apply`:
+
+```kotlin
+val user = User().apply {
+    name = "Karaneesh"
+    age = 21
+    city = "Chennai"
+}
+```
+
+Here, inside the `apply` block, the `User` object becomes the current context.
+
+Kotlin provides **5 scope functions**:
+
+```text
+let
+run
+with
+apply
+also
+```
+
+---
+
+# 2. Two Things Decide How Scope Functions Differ
+
+Every scope function can be understood using **two questions**:
+
+### Question 1: How is the object accessed inside the block?
+
+There are two possibilities:
+
+```text
+it
+this
+```
+
+### Question 2: What does the scope function return?
+
+There are two possibilities:
+
+```text
+Lambda result
+Original object
+```
+
+---
+
+# 3. Complete Comparison
+
+| Function | Object inside block | Returns         | Main purpose                 |
+| -------- | ------------------- | --------------- | ---------------------------- |
+| `let`    | `it`                | Lambda result   | Transform / null checking    |
+| `run`    | `this`              | Lambda result   | Work and calculate result    |
+| `with`   | `this`              | Lambda result   | Work with an existing object |
+| `apply`  | `this`              | Original object | Configure an object          |
+| `also`   | `it`                | Original object | Extra action / logging       |
+
+### Most important table:
+
+```text
+             Object access       Return value
+
+let          it                  Lambda result
+also         it                  Original object
+
+run          this                Lambda result
+with         this                Lambda result
+apply        this                Original object
+```
+
+---
+
+# 4. `it` vs `this`
+
+## `it`
+
+`it` is the **default name of a single lambda parameter**.
+
+Example:
+
+```kotlin
+val name = "Karaneesh"
+
+name.let {
+    println(it)
+}
+```
+
+Here:
+
+```text
+it = name
+```
+
+You can give `it` another name:
+
+```kotlin
+name.let { currentName ->
+    println(currentName)
+}
+```
+
+Therefore:
+
+```text
+it → lambda parameter
+```
+
+---
+
+## `this`
+
+`this` refers to the **current receiver object** of the lambda.
+
+Example:
+
+```kotlin
+val user = User()
+
+user.run {
+    println(this.name)
+}
+```
+
+Inside the block:
+
+```text
+this = user
+```
+
+Kotlin usually allows us to omit `this`:
+
+```kotlin
+user.run {
+    println(name)
+}
+```
+
+This is equivalent to:
+
+```kotlin
+user.run {
+    println(this.name)
+}
+```
+
+Therefore:
+
+```text
+this → current receiver
+```
+
+---
+
+# 5. `it` vs `this` — Core Difference
+
+### `it`
+
+```kotlin
+user.let {
+    println(it.name)
+}
+```
+
+The object is **given to the lambda as a parameter**.
+
+```text
+user
+ ↓
+lambda parameter
+ ↓
+it
+```
+
+### `this`
+
+```kotlin
+user.run {
+    println(name)
+}
+```
+
+The object becomes the **receiver of the lambda**.
+
+```text
+user
+ ↓
+receiver
+ ↓
+this
+ ↓
+name
+```
+
+### Memory:
+
+```text
+it   → "Here is the object."
+this → "This is the current object."
+```
+
+---
+
+# 6. `let`
+
+### Syntax
+
+```kotlin
+object.let {
+    // use it
+}
+```
+
+### Object access
+
+```text
+it
+```
+
+### Return
+
+```text
+Lambda result
+```
+
+Example:
+
+```kotlin
+val user = User("Karaneesh", 21)
+
+val name = user.let {
+    it.name
+}
+```
+
+Flow:
+
+```text
+user
+ ↓
+let
+ ↓
+it = user
+ ↓
+it.name
+ ↓
+"Karaneesh"
+```
+
+Therefore:
+
+```text
+name = "Karaneesh"
+```
+
+### Common use
+
+#### Null checking
+
+```kotlin
+val name: String? = "Karaneesh"
+
+name?.let {
+    println(it)
+}
+```
+
+If `name` is not null, the block executes.
+
+### Memory
+
+```text
+let → it → result
+```
+
+Think:
+
+> **"Take this object and give me something from it."**
+
+---
+
+# 7. `also`
+
+### Syntax
+
+```kotlin
+object.also {
+    // use it
+}
+```
+
+### Object access
+
+```text
+it
+```
+
+### Return
+
+```text
+Original object
+```
+
+Example:
+
+```kotlin
+val user = User("Karaneesh", 21)
+
+val result = user.also {
+    println(it.name)
+}
+```
+
+`result` is still:
+
+```text
+User
+```
+
+not the result of `println()`.
+
+### Common uses
+
+* Logging
+* Debugging
+* Validation
+* Performing an additional action
+
+Example:
+
+```kotlin
+val user = User().also {
+    println("User created")
+}
+```
+
+### Memory
+
+```text
+also → it → same object
+```
+
+Think:
+
+> **"Keep this object and also do something with it."**
+
+---
+
+# 8. `run`
+
+### Syntax
+
+```kotlin
+object.run {
+    // use this
+}
+```
+
+### Object access
+
+```text
+this
+```
+
+### Return
+
+```text
+Lambda result
+```
+
+Example:
+
+```kotlin
+val user = User("Karaneesh", 21)
+
+val result = user.run {
+    name.length
+}
+```
+
+Inside:
+
+```kotlin
+name
+```
+
+means:
+
+```kotlin
+this.name
+```
+
+The result is:
+
+```text
+name.length
+```
+
+So:
+
+```text
+result = 9
+```
+
+### Common use
+
+Use `run` when you want to:
+
+* Work with an object's properties/functions
+* Calculate something
+* Return the calculated result
+
+### Memory
+
+```text
+run → this → result
+```
+
+Think:
+
+> **"Work with this object and give me the result."**
+
+---
+
+# 9. `with`
+
+### Syntax
+
+```kotlin
+with(object) {
+    // use this
+}
+```
+
+### Object access
+
+```text
+this
+```
+
+### Return
+
+```text
+Lambda result
+```
+
+Example:
+
+```kotlin
+val user = User("Karaneesh", 21)
+
+val result = with(user) {
+    "$name - $age"
+}
+```
+
+Result:
+
+```text
+"Karaneesh - 21"
+```
+
+### Important difference from `run`
+
+`run`:
+
+```kotlin
+user.run {
+    name
+}
+```
+
+`with`:
+
+```kotlin
+with(user) {
+    name
+}
+```
+
+Both use:
+
+```text
+this
+```
+
+and both return:
+
+```text
+Lambda result
+```
+
+The main syntactic difference is:
+
+```text
+run  → called on the object
+with → object passed as an argument
+```
+
+### Memory
+
+```text
+with → this → result
+```
+
+Think:
+
+> **"With this object, perform these operations."**
+
+---
+
+# 10. `apply`
+
+### Syntax
+
+```kotlin
+object.apply {
+    // use this
+}
+```
+
+### Object access
+
+```text
+this
+```
+
+### Return
+
+```text
+Original object
+```
+
+Example:
+
+```kotlin
+val user = User().apply {
+    name = "Karaneesh"
+    age = 21
+}
+```
+
+Inside:
+
+```kotlin
+name = "Karaneesh"
+```
+
+means:
+
+```kotlin
+this.name = "Karaneesh"
+```
+
+The important part:
+
+```text
+apply returns the same User object.
+```
+
+### Common use
+
+**Object configuration/initialization.**
+
+Android example:
+
+```kotlin
+val intent = Intent(this, SecondActivity::class.java).apply {
+    putExtra("name", "Karaneesh")
+    putExtra("age", 21)
+}
+```
+
+After configuration, `intent` is still an:
+
+```text
+Intent
+```
+
+### Memory
+
+```text
+apply → this → same object
+```
+
+Think:
+
+> **"Configure this object and give me the same object back."**
+
+---
+
+# 11. `let` vs `also`
+
+Both use:
+
+```text
+it
+```
+
+But return different things.
+
+### `let`
+
+```kotlin
+val result = user.let {
+    it.name
+}
+```
+
+Returns:
+
+```text
+String
+```
+
+### `also`
+
+```kotlin
+val result = user.also {
+    println(it.name)
+}
+```
+
+Returns:
+
+```text
+User
+```
+
+Therefore:
+
+```text
+let  → it → result
+also → it → object
+```
+
+---
+
+# 12. `run` vs `apply`
+
+Both use:
+
+```text
+this
+```
+
+But return different things.
+
+### `run`
+
+```kotlin
+val result = user.run {
+    name.length
+}
+```
+
+Returns:
+
+```text
+Int
+```
+
+### `apply`
+
+```kotlin
+val result = user.apply {
+    age = 22
+}
+```
+
+Returns:
+
+```text
+User
+```
+
+Therefore:
+
+```text
+run   → this → result
+apply → this → object
+```
+
+This is one of the **most important differences**.
+
+---
+
+# 13. `run` vs `with`
+
+Both:
+
+```text
+this
++
+lambda result
+```
+
+The main difference is syntax.
+
+### `run`
+
+```kotlin
+user.run {
+    println(name)
+}
+```
+
+### `with`
+
+```kotlin
+with(user) {
+    println(name)
+}
+```
+
+Think:
+
+```text
+run  → object.run { }
+
+with → with(object) { }
+```
+
+They are very similar in behavior.
+
+---
+
+# 14. `apply` vs `also`
+
+Both return:
+
+```text
+Original object
+```
+
+But object access differs.
+
+### `apply`
+
+```kotlin
+user.apply {
+    name = "Karaneesh"
+}
+```
+
+Uses:
+
+```text
+this
+```
+
+### `also`
+
+```kotlin
+user.also {
+    println(it.name)
+}
+```
+
+Uses:
+
+```text
+it
+```
+
+Think:
+
+```text
+apply → configure object
+also  → do something extra
+```
+
+---
+
+# 15. Scope Functions Based on Purpose
+
+### Want to transform/extract something?
+
+```text
+let
+```
+
+Example:
+
+```kotlin
+val name = user.let {
+    it.name
+}
+```
+
+---
+
+### Want to configure an object?
+
+```text
+apply
+```
+
+Example:
+
+```kotlin
+val user = User().apply {
+    name = "Karaneesh"
+    age = 21
+}
+```
+
+---
+
+### Want to perform an extra action?
+
+```text
+also
+```
+
+Example:
+
+```kotlin
+val user = User().also {
+    println("Created: $it")
+}
+```
+
+---
+
+### Want to calculate something using the object?
+
+```text
+run
+```
+
+Example:
+
+```kotlin
+val message = user.run {
+    "Name: $name"
+}
+```
+
+---
+
+### Want to perform multiple operations on an existing object?
+
+```text
+with
+```
+
+Example:
+
+```kotlin
+with(user) {
+    name = "Karaneesh"
+    age = 21
+}
+```
+
+---
+
+# 16. Scope Functions and Higher-Order Functions
+
+Scope functions are strongly related to **lambdas and higher-order functions**.
+
+Example:
+
+```kotlin
+user.let {
+    println(it.name)
+}
+```
+
+The block:
+
+```kotlin
+{
+    println(it.name)
+}
+```
+
+is a **lambda**.
+
+The scope function accepts that lambda.
+
+Therefore:
+
+```text
+Scope functions
+      ↓
+use lambdas
+      ↓
+higher-order function concept
+```
+
+---
+
+# 17. Important: Scope Functions Don't Create a New Object
+
+For example:
+
+```kotlin
+val user = User()
+
+val result = user.apply {
+    name = "Karaneesh"
+}
+```
+
+`apply` does **not** create another `User`.
+
+It works with the same object:
+
+```text
+user ──────────────┐
+                   ↓
+                 apply
+                   ↓
+             modify same object
+                   ↓
+                 user
+```
+
+That's why:
+
+```kotlin
+result === user
+```
+
+would be:
+
+```text
+true
+```
+
+for `apply`.
+
+---
+
+# 18. Nested Scope Functions
+
+You can nest them:
+
+```kotlin
+user.apply {
+    name = "Karaneesh"
+
+    address.apply {
+        city = "Chennai"
+    }
+}
+```
+
+Here there are multiple `this` receivers.
+
+Inner:
+
+```kotlin
+this
+```
+
+refers to:
+
+```text
+address
+```
+
+Outer:
+
+```text
+this
+```
+
+refers to:
+
+```text
+user
+```
+
+This is one reason deeply nested scope functions should be avoided when they make code difficult to understand.
+
+---
+
+# 19. `it` Can Be Renamed
+
+Because `it` is a lambda parameter:
+
+```kotlin
+user.let {
+    println(it.name)
+}
+```
+
+can become:
+
+```kotlin
+user.let { currentUser ->
+    println(currentUser.name)
+}
+```
+
+This is useful when the meaning of `it` isn't obvious.
+
+`this` is different because it represents the **receiver**, not a normal named lambda parameter.
+
+---
+
+# 20. Final Cheat Sheet
+
+```text
+┌─────────┬──────────┬─────────────────┬─────────────────────────┐
+│ Function│ Access   │ Returns         │ Main use                │
+├─────────┼──────────┼─────────────────┼─────────────────────────┤
+│ let     │ it       │ Lambda result   │ Transform / null check  │
+│ also    │ it       │ Original object │ Extra action / logging  │
+│ run     │ this     │ Lambda result   │ Calculate using object  │
+│ with    │ this     │ Lambda result   │ Work with object        │
+│ apply   │ this     │ Original object │ Configure object        │
+└─────────┴──────────┴─────────────────┴─────────────────────────┘
+```
+
+### The most important memory:
+
+```text
+it
+├── let   → result
+└── also  → object
+
+this
+├── run   → result
+├── with  → result
+└── apply → object
+```
+
+### One-line definitions
+
+```text
+let   = take object → do something → get result
+
+also  = take object → do something extra → get same object
+
+run   = work inside object → get result
+
+with  = with this object → do operations → get result
+
+apply = configure object → get same object
+```
+
+**If you remember only one thing:**
+`it` means **the object is a lambda parameter**, while `this` means **the object is the lambda's receiver/current context**. The second major difference is whether the function returns the **lambda's result** or the **original object**.
+
 ------------------------------------------------------------------------------------------
+
+## Extension Function — Simple Notes
+
+### What is it?
+
+An **extension function** lets us add a new function to an existing class **without changing that class**.
+
+### Example
+
+```kotlin
+fun String.isValid(): Boolean {
+    return this.isNotEmpty()
+}
+```
+
+Now we can use it like:
+
+```kotlin
+val name = "Karaneesh"
+
+name.isValid()
+```
+
+Normally, `isValid()` does not exist in `String`. We added it using an extension function.
+
+---
+
+### How to understand it?
+
+```kotlin
+fun String.isValid()
+```
+
+* `String` → class we are extending
+* `isValid()` → new function
+* `this` → the String object calling the function
+
+So:
+
+```kotlin
+"Hello".isValid()
+```
+
+means:
+
+```text
+"Hello" → this
+```
+
+---
+
+### Another example
+
+```kotlin
+data class User(
+    val name: String,
+    val age: Int
+)
+
+fun User.isAdult(): Boolean {
+    return age >= 18
+}
+```
+
+Usage:
+
+```kotlin
+val user = User("Karaneesh", 21)
+
+user.isAdult()
+```
+
+Here we added `isAdult()` to `User` **without modifying the `User` class**.
+
+---
+
+### Simple definition
+
+> **Extension function = adding a new function to an existing class without modifying the class.**
+
+### Remember
+
+```text
+fun String.isValid()
+    ↑
+class being extended
+```
+
+```text
+"Hello".isValid()
+        ↑
+   extension function
+```
+
+**Commonly used in Android/Kotlin** to make code shorter and cleaner.
+
+
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
